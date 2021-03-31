@@ -3,7 +3,6 @@
 ![](https://res.cloudinary.com/zeit-inc/image/upload/v1509936789/repositories/pkg/pkg-repo-banner-new.png)
 
 [![Build Status](https://github.com/vercel/pkg/actions/workflows/ci.yml/badge.svg)](https://github.com/vercel/pkg/actions/workflows/ci.yml)
-[![Coverage Status](https://coveralls.io/repos/github/vercel/pkg/badge.svg?branch=master)](https://coveralls.io/github/vercel/pkg?branch=master)
 [![Dependency Status](https://david-dm.org/vercel/pkg/status.svg)](https://david-dm.org/vercel/pkg)
 [![devDependency Status](https://david-dm.org/vercel/pkg/dev-status.svg)](https://david-dm.org/vercel/pkg?type=dev)
 
@@ -81,7 +80,7 @@ your `package.json` file.
     "scripts": "build/**/*.js",
     "assets": "views/**/*",
     "targets": [ "node4-linux-armv6" ],
-    "outputPath: "dist"
+    "outputPath": "dist"
   }
 ```
 
@@ -142,6 +141,30 @@ or `--out-path` to place executables for multiple targets.
 Pass `--debug` to `pkg` to get a log of packaging process.
 If you have issues with some particular file (seems not packaged
 into executable), it may be useful to look through the log.
+
+### Bytecode (reproducibility)
+
+By default, your source code is precompiled to v8 bytecode before being written
+to the output file. To disable this feature, pass `--no-bytecode` to `pkg`.
+
+> Why would you want to do this?
+
+If you need a reproducible build
+process where your executable hashes (e.g. md5, sha1, sha256, etc.) are the
+same value between builds. Because compiling bytecode is not deterministic
+(see [here](https://ui.adsabs.harvard.edu/abs/2019arXiv191003478C/abstract) or
+[here](https://medium.com/dailyjs/understanding-v8s-bytecode-317d46c94775)) it
+results in executables with differing hashed values. Disabling bytecode
+compilation allows a given input to always have the same output.
+
+> Why would you NOT want to do this?
+
+While compiling to bytecode does not make your source code 100% secure, it does
+add a small layer of security/privacy/obscurity to your source code. Turning
+off bytecode compilation causes the raw source code to be written directly to
+the executable file. If you're on \*nix machine and would like an example, run
+`pkg` with the `--no-bytecode` flag, and use the GNU strings tool on the
+output. You then should be able to grep your source code.
 
 ### Build
 
@@ -287,3 +310,26 @@ You could check on **Unix systems** (Linux/macOS) in `bash`:
 ```bash
 $ printenv | grep NODE
 ```
+
+## Advanced
+
+### exploring virtual file system embedded in debug mode
+
+When you are using the `--debug` flag when building your executable,
+`pkg` add the ability to display the content of the virtual file system
+and the symlink table on the console, when the application starts,
+providing that the environement variable DEBUG_PKG is set.
+This feature can be useful to inspect if symlinks are correctly handled,
+and check that all the required files for your application are properly
+incorporated to the final executable.
+
+    $ pkg --debug app.js -o output
+    $ DEBUG_PKG output
+
+or
+
+    C:\> pkg --debug app.js -o output.exe
+    C:\> set DEBUG_PKG=1
+    C:\> output.exe
+
+Note: make sure not to use --debug flag in production.
